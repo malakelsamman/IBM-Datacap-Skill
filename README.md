@@ -120,9 +120,35 @@ Run: `node EgyptPostPortal/server.js` (the demo machine runs it as the Windows s
 
 ---
 
-## 🚀 How to Build & Deploy
+## 💻 How to Set It Up on a New VM
+
+### 1. Initialize & Pull Directly in `C:\Datacap`
+Open PowerShell in `C:\Datacap` on the new VM and run:
+
+```powershell
+cd C:\Datacap
+git init -b main
+git remote add origin https://github.com/malakelsamman/IBM-Datacap-Skill.git
+git pull origin main
+```
+
+### What Happens Immediately:
+- The `.bob/skills/` folder will be placed right under `C:\Datacap\.bob\skills\`. IBM Bob on that VM will **instantly discover and activate all skills**.
+- The `templates/`, `examples/`, `LocalOCRActions/`, and ruleset configurations will be placed into their exact paths.
+- You will **still see the full `C:\Datacap` folder** with all your applications (`GoldenDemo`, `APT`, `DStudio`, `RRS`, etc.) completely intact.
+
+---
+
+## 🚀 How to Build & Deploy Actions on a New VM
 
 1. **Build and Deploy Actions**:
-   Run `ExternalOCRActions\CompileAndDeploy.bat` from an administrator command prompt. The script builds with the .NET Framework 4.0.30319 `csc.exe` and deploys the DLL, `.rrx` and both JSON configs to `C:\Datacap\RRS\` and `GoldenDemo\dco_GoldenDemo\rules\`. Afterwards run `Restart-Service 'Datacap Rulerunner Service' -Force`.
-2. **Execute End-to-End Verification**:
-   Run `Test-VendorOCR-POC.ps1` in PowerShell to test API health, field cropping, recognition, and legacy flow isolation.
+   Run `LocalOCRActions\CompileAndDeploy.bat` from an administrator command prompt. The script builds with the .NET Framework 4.0.30319 `csc.exe` and deploys the DLL and `.rrx` to `C:\Datacap\RRS\` and `GoldenDemo\dco_GoldenDemo\rules\`.
+   ```cmd
+   C:\Datacap\LocalOCRActions\CompileAndDeploy.bat
+   ```
+2. **Restart Rulerunner Service**:
+   ```powershell
+   Restart-Service 'Datacap Rulerunner Service' -Force
+   ```
+3. **Execute Standalone Verification**:
+   Run `LocalOCRActions\Test-LocalOCR.ps1` in PowerShell to verify OCR endpoints and field recognition against sample form images.
