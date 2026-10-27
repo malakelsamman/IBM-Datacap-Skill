@@ -1,0 +1,24 @@
+<?xml version='1.0' ?>
+<rrx namespace="CustomActions" v="1.0.0">
+  <!--
+    Datacap RRX Action Definition Template.
+    Provides metadata and descriptors for Datacap Studio / Datacap Rulerunner.
+  -->
+  <i ref="rrunner"/>
+
+  <!-- Action: CustomAction_Sample -->
+  <f name="CustomAction_Sample"
+     access="private"
+     qi="Executes sample custom logic against CurrentDCO node.">
+    <p name="Parameter1" type="string" qi="Description of Parameter 1"/>
+    <p name="Parameter2" type="string" qi="Description of Parameter 2"/>
+    <ap>
+      Parameter1: First input argument.<br/>
+      Parameter2: Second input argument.
+    </ap>
+    <e>
+      <b>CustomAction_Sample("Value1", "Value2")</b><br/>
+    </e>
+  </f>
+
+</rrx>
