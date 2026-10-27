@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ruleset id="23" name="ExternalOCR_FixupRoute" ver="1" modder="admin.1" qi="Routes batches that contain unidentified pages (type Other) to the Fixup job">
+	<rule name="Unidentified Page To Fixup" id="1" dcomap.open="P=Other" qi="File name did not match a known form: send the batch to Fixup for manual classification">
+		<func name="Route To Fixup">
+			<a ns="rrunner" name="Task_NumberOfSplits" qi="">
+				<p type="bInter" name="bInter"/>
+				<p type="bDebug" name="bDebug"/>
+				<p type="strParam" v="1" name="nNumOfSplits"/>
+			</a>
+			<a ns="rrunner" name="Task_RaiseCondition">
+				<p type="bInter" name="bInter"/>
+				<p type="bDebug" name="bDebug"/>
+				<p type="strParam" v="0,0" name="strParam"/>
+			</a>
+		</func>
+	</rule>
+</ruleset>

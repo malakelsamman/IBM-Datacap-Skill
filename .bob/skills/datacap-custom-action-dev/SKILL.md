@@ -35,56 +35,59 @@ namespace ExternalOCRActions
             }
         }
 
-        public int Execute()
+        public int Execute(string parameters)
         {
             try {
-                // Return 0 for success, 1 for rule failure (advance to next func), 99 for fatal exception
+                // Return 0 for success, 1 for rule failure (advances to next func), 99 for fatal exception
                 return 0;
             } catch (Exception ex) {
                 if (RRLog != null) RRLog.Write("Error: " + ex.Message);
-                return 99;
+                return 1;
             }
         }
     }
 }
 ```
 
-## 2. Direct Fingerprint XML Coordinate Fallback
-When runtime DCO fields are created before fingerprint matching or without zone inheritance, `CurrentDCO.Position` defaults to `"0,0,0,0"`. Always implement a direct fingerprint XML reader fallback:
+---
+
+## 2. Ingested Filename Resolution Pattern (`VScan.xml`)
+At runtime, `CurrentDCO.ImageName` is typically renamed to `tm00000x.jpg`. To identify page types from original client filenames, always inspect `VScan.xml` in the batch folder:
 
 ```csharp
-public static bool TryGetPositionFromFingerprintXml(string batchDir, string fingerprintId, string fieldName, out int[] pos)
+public static string ResolveSourceFileName(string pageId, dynamic batchPilot, dynamic dco, dynamic pageDco)
 {
-    pos = null;
-    if (string.IsNullOrEmpty(fingerprintId)) return false;
-
-    // Locate fingerprint directory relative to batch or application root
-    string fpPath = Path.Combine(batchDir, "..", "..", "fingerprint", fingerprintId + ".xml");
-    if (!File.Exists(fpPath)) return false;
-
+    // 1. Check VScan.xml in batch directory
     try {
-        var doc = new System.Xml.XmlDocument();
-        doc.Load(fpPath);
-        var fieldNode = doc.SelectSingleNode("//F[@id='" + fieldName + "']");
-        if (fieldNode != null) {
-            var posVar = fieldNode.SelectSingleNode("V[@n='Position']");
-            if (posVar != null && !string.IsNullOrEmpty(posVar.InnerText) && posVar.InnerText != "0,0,0,0") {
-                string[] parts = posVar.InnerText.Split(',');
-                if (parts.Length == 4) {
-                    pos = new int[] {
-                        int.Parse(parts[0].Trim()),
-                        int.Parse(parts[1].Trim()),
-                        int.Parse(parts[2].Trim()),
-                        int.Parse(parts[3].Trim())
-                    };
-                    return true;
+        string batchDir = batchPilot != null ? Convert.ToString(batchPilot.BatchDir) : Convert.ToString(dco.Variable("BatchDir"));
+        if (!string.IsNullOrEmpty(batchDir)) {
+            string vscanPath = Path.Combine(batchDir, "VScan.xml");
+            if (File.Exists(vscanPath)) {
+                var xmlDoc = new XmlDocument();
+                xmlDoc.Load(vscanPath);
+                XmlNode pNode = xmlDoc.SelectSingleNode("//P[@id='" + pageId + "']");
+                if (pNode != null) {
+                    XmlNode src = pNode.SelectSingleNode("V[@n='ScanSrcPath']") ?? pNode.SelectSingleNode("V[@n='PageName']");
+                    if (src != null && !string.IsNullOrEmpty(src.InnerText))
+                        return Path.GetFileName(src.InnerText);
                 }
             }
         }
     } catch { }
-    return false;
+
+    // 2. Direct DCO variables fallback
+    try {
+        string srcPath = Convert.ToString(pageDco.Variable("ScanSrcPath"));
+        if (!string.IsNullOrEmpty(srcPath)) return Path.GetFileName(srcPath);
+        string pageName = Convert.ToString(pageDco.Variable("PageName"));
+        if (!string.IsNullOrEmpty(pageName)) return Path.GetFileName(pageName);
+    } catch { }
+
+    return null;
 }
 ```
+
+---
 
 ## 3. Populating Character DCO Nodes (<C>) for Verification & Highlighting
 Datacap Verification panels (Datacap Studio, Navigator, VeriFine) require character nodes `<C>` with Unicode decimal values to display and highlight text correctly:
@@ -114,20 +117,50 @@ public static void PopulateFieldCharacters(dynamic fieldDco, string text, int co
 }
 ```
 
-## 4. Compilation and Dual-Deployment Pattern
-Compile directly with .NET Framework 4.x `csc.exe` and deploy to **both** `C:\Datacap\RRS\` and `<AppDir>\dco_<AppName>\rules\`:
+---
 
-```powershell
-# Compile DLL
-& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:library /platform:anycpu /optimize+ /out:"C:\Datacap\RRS\ExternalOCRActions.dll" /reference:System.dll,System.Core.dll,System.Drawing.dll,System.Web.Extensions.dll,System.Xml.dll (Get-ChildItem -Path "ExternalOCRActions\src\*.cs" | Select-Object -ExpandProperty FullName)
+## 4. Structured Privacy-Compliant Telemetry Logging
+Never log Base64 payload bodies or full PII in Datacap logs. Use single-line structured telemetry:
 
-# Deploy to Application Rules
-Copy-Item "C:\Datacap\RRS\ExternalOCRActions.dll" "GoldenDemo\dco_GoldenDemo\rules\" -Force
+```csharp
+public static void LogTelemetry(dynamic rrLog, string action, string pageType, string fieldId, string sourceFile, 
+    int cropW, int cropH, string route, string endpoint, string lang, string docType, string httpStatus, string parseStatus, bool reviewReq)
+{
+    string logMsg = string.Format("{0} | PageType='{1}' | FieldID='{2}' | SourceFile='{3}' | Crop='{4}x{5}' | Route='{6}' | Endpoint='{7}' | Lang='{8}' | DocType='{9}' | HTTP='{10}' | ParseStatus='{11}' | VerificationRequired={12}",
+        action, pageType, fieldId, sourceFile, cropW, cropH, route, endpoint, lang, docType, httpStatus, parseStatus, reviewReq);
+    
+    if (rrLog != null) rrLog.Write(logMsg);
+}
 ```
 
-## 5. DCO Object Hierarchy
+---
+
+## 5. Safe Service Stop & Dual-Deployment Lifecycle
+When compiling custom action DLLs, running Datacap background services hold open file handles. Always stop services, compile, deploy to both `C:\Datacap\RRS\` and `<AppDir>\dco_<AppName>\rules\`, and restart:
+
+```bat
+@echo off
+net stop DCTMS
+net stop "Datacap Rulerunner Service"
+net stop wTMService
+
+set CSC="C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+%CSC% /target:library /platform:anycpu /optimize+ /out:"C:\Datacap\RRS\ExternalOCRActions.dll" /reference:System.dll,System.Core.dll,System.Drawing.dll,System.Web.Extensions.dll,System.Xml.dll src\*.cs
+
+copy /Y "C:\Datacap\RRS\ExternalOCRActions.dll" "C:\Datacap\GoldenDemo\dco_GoldenDemo\rules\"
+copy /Y "RRS\ExternalOCRActions.rrx" "C:\Datacap\RRS\"
+copy /Y "RRS\ExternalOCRActions.rrx" "C:\Datacap\GoldenDemo\dco_GoldenDemo\rules\"
+
+net start DCTMS
+net start "Datacap Rulerunner Service"
+net start wTMService
+```
+
+---
+
+## 6. DCO Object Hierarchy
 - `ObjectType == 0`: Batch (`B`)
 - `ObjectType == 1`: Document (`D`)
 - `ObjectType == 2`: Page (`P`)
 - `ObjectType == 3`: Field (`F`)
-- `ObjectType == 4`: Character (`C`)
+- `AddChild(2)` on Field: Character node (`C`)
