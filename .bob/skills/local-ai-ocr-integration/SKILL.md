@@ -1,127 +1,90 @@
 ---
 name: local-ai-ocr-integration
-description: Integrate local or external vision and OCR REST endpoints with Datacap pipelines, handling Base64 payloads, document_type constraints, word alternatives, and verification routing.
+description: General pattern and instructions to integrate ANY local or remote vision, OCR, or multimodal AI REST model with document ingestion workflows (Datacap, custom pipelines, etc.), handling Base64 payloads, confidence thresholds, and dynamic review routing.
 ---
 
-# Local & External AI OCR Integration Guide
+# General Local AI & OCR Model Integration Skill
 
-## 1. REST Endpoint Specifications & Capabilities
+This skill defines the universal design pattern for integrating any vision, OCR, or multimodal Large Language Model (LLM) REST service with document ingestion engines (such as IBM Datacap, Kofax, or custom .NET/Python pipelines).
 
-### A. Pre-Flight Diagnostic Endpoints
-Before calling recognition, always query diagnostic endpoints:
-- `GET /alive`: `{"message": "alive"}`
-- `GET /health_checks`: `{"server_status": "alive", "uptime": "..."}`
-- `GET /get_supported_languages`: Returns supported language and model modes:
+---
+
+## 1. Universal REST Service Contract Pattern
+
+Any local vision/OCR model should expose two standard lifecycle endpoints:
+
+### Endpoint A: Classification / Identification (`POST /identify`)
+* **Purpose**: Inspects visual layout and text cues to determine document/page category.
+* **General Request Schema**:
   ```json
   {
-    "supported_languages": {
-      "handwritten": ["Arabic/Latest"]
-    }
+    "file_name": "document_image.jpg",
+    "image_base64": "<BASE64_ENCODED_IMAGE_STRING>"
+  }
+  ```
+* **General Response Schema**:
+  ```json
+  {
+    "ok": true,
+    "page_type": "<IDENTIFIED_PAGE_TYPE>",
+    "document_type": "<OPTIONAL_PARENT_DOC_TYPE>",
+    "confidence": 0.95,
+    "review_required": false
   }
   ```
 
-### B. Field-Level Recognition Endpoints
-
-#### 1. JSON Base64 Payload (`POST /recognize_base64`)
-```json
-{
-  "file": "<Base64_Encoded_Crop_PNG>",
-  "language": "Arabic/Latest",
-  "document_type": "handwritten",
-  "batch_size": 1
-}
-```
-
-#### 2. Multipart Form Data (`POST /recognize`)
-- `file`: Binary image (PNG/JPEG) of cropped field
-- `language`: `"Arabic/Latest"`
-- `document_type`: `"handwritten"`
-- `batch_size`: `1`
-
-> ⚠️ **Engine Constraint Warning:** If an endpoint's model is specialized for handwriting (as indicated by `/get_supported_languages`), sending `document_type: "typewritten"` can result in **HTTP 400 Bad Request**. Always route typewritten fields to Datacap built-in OCR/PL (`RecognizeFieldOCRPL`) or OCR/A.
-
----
-
-## 2. Standard Response Parsing Hierarchy
-Vendor OCR endpoints return nested JSON structures containing page, zone, paragraph, line, and word objects:
-
-```csharp
-// Response path: pages[0].zones[*].paragraphs[*].lines[*].text
-var respDict = serializer.Deserialize<Dictionary<string, object>>(respJson);
-if (respDict.ContainsKey("pages")) {
-    var pagesList = respDict["pages"] as ArrayList;
-    if (pagesList != null && pagesList.Count > 0) {
-        var pageObj = pagesList[0] as Dictionary<string, object>;
-        var zonesList = pageObj["zones"] as ArrayList;
-        var textLines = new List<string>();
-
-        if (zonesList != null) {
-            foreach (Dictionary<string, object> zone in zonesList) {
-                var paragraphs = zone["paragraphs"] as ArrayList;
-                if (paragraphs != null) {
-                    foreach (Dictionary<string, object> para in paragraphs) {
-                        var lines = para["lines"] as ArrayList;
-                        if (lines != null) {
-                            foreach (Dictionary<string, object> line in lines) {
-                                if (line.ContainsKey("text"))
-                                    textLines.Add(Convert.ToString(line["text"]));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        string fullText = string.Join(" ", textLines).Trim();
-    }
-}
-```
+### Endpoint B: Data Extraction / Recognition (`POST /recognize`)
+* **Purpose**: Extracts key-value field data from the classified image using domain-specific models, LoRA adapters, or prompt templates.
+* **General Request Schema**:
+  ```json
+  {
+    "file_name": "document_image.jpg",
+    "image_base64": "<BASE64_ENCODED_IMAGE_STRING>",
+    "page_type": "<IDENTIFIED_PAGE_TYPE>"
+  }
+  ```
+* **General Response Schema**:
+  ```json
+  {
+    "ok": true,
+    "extracted_fields": {
+      "Field_1": "Extracted text or numeric value",
+      "Field_2": "Another extracted value"
+    },
+    "confidence": 0.92,
+    "review_required": false
+  }
+  ```
 
 ---
 
-## 3. Hybrid Field Routing Policy
-Configure Datacap rulesets to send only relevant fields to external AI. Deployed state (see `externalocr_extractandrecognize.rul`):
+## 2. Generalization Principles (Applicable to Any New Document Type)
 
-| Field Category | Technology Route | Action / Rule Implementation |
-| :--- | :--- | :--- |
-| **Handwritten and name/address Arabic** | External Vendor OCR API | `net:ExternalOCRActions.ExternalOCR_RecognizeField` (`/recognize_base64`, `handwritten`) |
-| **Numbers: NationalIdNumber, AccountNumber** | Built-in OCR/A | `RecognizeFieldOCR_A` in `net:RecognitionOCRA.OCRAActions` |
-| **AvrgMonthlyIncome** | Currently the vendor action (rule 2). The older handoff skill says it is a local checkbox; decide and keep one. | |
-| **Checkboxes / Choice Lists** | Datacap OMR | Built-in OMR action library |
+When adding a **new document type** (e.g. Invoices, Passports, Tax Forms, Custom Applications):
 
-> `RecognizeFieldOCRPL` is **not** used: the PL library fails with RRS error 17000008 in this install (see `datacap-rrs-diagnostic-debugger`). Do not route machine-printed Arabic to it.
+1. **Do not hardcode document types in C#**:
+   - The integration action reads whatever `page_type` is returned by the AI model.
+   - It maps `extracted_fields` keys directly to target DCO fields of the same name.
 
----
+2. **DCO Hierarchy Alignment**:
+   - In your document setup hierarchy (e.g. `GOLDENDEMO.XML`), create a Page Type matching `<page_type>` returned by your AI service.
+   - Create child `<F>` field elements corresponding to the keys returned in `extracted_fields`.
 
-## 4. Safe In-Memory Field Cropping
-Never crop full pages onto disk or hold open file locks during HTTP transport. Use in-memory cloning with boundary clamping:
+3. **Multi-Model / LoRA Adapter Routing**:
+   - The model backend can activate specialized LoRA adapters or prompt templates dynamically based on `page_type` without requiring code changes in Datacap.
 
-```csharp
-public static byte[] CropFieldPng(string imagePath, Rectangle zoneRect, out int cropW, out int cropH)
-{
-    using (Bitmap fullImg = new Bitmap(imagePath))
-    {
-        int x = Math.Max(0, Math.Min(zoneRect.X, fullImg.Width - 1));
-        int y = Math.Max(0, Math.Min(zoneRect.Y, fullImg.Height - 1));
-        int w = Math.Max(1, Math.Min(zoneRect.Width, fullImg.Width - x));
-        int h = Math.Max(1, Math.Min(zoneRect.Height, fullImg.Height - y));
-
-        cropW = w;
-        cropH = h;
-
-        using (Bitmap crop = fullImg.Clone(new Rectangle(x, y, w, h), fullImg.PixelFormat))
-        using (MemoryStream ms = new MemoryStream())
-        {
-            crop.Save(ms, ImageFormat.Png);
-            return ms.ToArray();
-        }
-    }
-}
-```
+4. **Confidence-Based Human-in-the-Loop Routing**:
+   - Apply a universal confidence rule:
+     ```
+     IF confidence < Threshold (default 0.80) OR review_required == true OR field_is_empty
+     THEN set TargetNode.Status = 1 (Route to Human Review / Verify)
+     ELSE set TargetNode.Status = 0 (Auto-pass)
+     ```
 
 ---
 
-## 5. Verification Routing
-- On HTTP error or empty response:
-  - Do NOT guess or hallucinate field values.
-  - Set `CurrentDCO.VerificationStatus = 1;` (or `CurrentDCO.Status = 1`).
-  - Log error telemetry with endpoint and HTTP status code.
+## 3. Representative Examples & References
+
+For concrete examples of this pattern in practice (Signature cards, ID cards, Application forms), inspect:
+- [`examples/sample_forms/README.md`](../../examples/sample_forms/README.md)
+- [`DATACAP_LOCAL_OCR_BLUEPRINT.md`](../../DATACAP_LOCAL_OCR_BLUEPRINT.md)
