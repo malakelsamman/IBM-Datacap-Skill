@@ -1,0 +1,5 @@
+{
+  "_comment": "Runtime configuration for LocalOCRActions. Edit these values without recompiling the DLL.",
+  "base_url": "http://127.0.0.1:8019",
+  "timeout_seconds": 120
+}

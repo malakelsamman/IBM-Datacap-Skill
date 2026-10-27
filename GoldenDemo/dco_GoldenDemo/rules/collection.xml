@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rsapp name="GoldenDemo">
+	<rsc>
+		<ruleset id="ImportFiles.Rul.dll" name.dll="ImportFiles"/>
+		<ruleset id="2" name="Import Files - All" depends=""/>
+		<ruleset name.dll="Image_Convert" id="Image_Convert" depends=""/>
+		<ruleset name.dll="ImageEnhancement" id="ImageEnhancement" depends=""/>
+		<ruleset name.dll="IdentifyPages" id="IdentifyPages" depends=""/>
+		<ruleset name.dll="CreateDocuments" id="CreateDocuments" depends=""/>
+		<ruleset name="Document Integrity" id="11" depends=""/>
+		<ruleset name.dll="RecognizePagesAndFields" id="RecognizePagesAndFields" depends=""/>
+		<ruleset name.dll="ValidateFields" id="ValidateFields" depends=""/>
+		<ruleset name="Routing" id="10" depends=""/>
+		<ruleset name="Export" id="7" depends=""/>
+		<ruleset name="FingerprintAdd" id="8" depends=""/>
+		<ruleset name="Export Statistics" id="Export Statistics" depends=""/>
+		<ruleset name="Profile Statistics" id="Profile Statistics" depends=""/>
+		<ruleset id="1" name="OMR" depends=""/>
+		<ruleset id="3" name="RolesBasedRedaction" depends=""/>
+		<ruleset id="ExportToFileNet.Rul.dll" name.dll="ExportToFileNet" depends=""/>
+		<ruleset id="ImageCreate.Rul.dll" name.dll="ImageCreate"/>
+		<ruleset id="4" name="RecognizeLineItemsRuleSet" depends=""/>
+		<ruleset id="14" name="RecognizeLineItemsRuleSet2" depends=""/>
+		<ruleset id="15" name="RecognizeLineItemsRuleSet3" depends=""/>
+		<ruleset id="5" name="CreatePDFRuleSet" depends=""/>
+		<ruleset id="6" name="ExportFilesRuleSet" depends=""/>
+		<ruleset id="9" name="RegEX" depends=""/>
+		<ruleset id="12" name="FixUpRoutingRuleset" depends=""/>
+		<ruleset id="13" name="PopulateDocTypeRuleSet" depends=""/>
+		<ruleset id="ExportToBox.Rul.dll" name.dll="ExportToBox" depends=""/>
+		<ruleset id="ExportToCSV.Rul.dll" name.dll="ExportToCSV" depends=""/>
+		<ruleset id="ExportToIBMCM.Rul.dll" name.dll="ExportToIBMCM"/>
+		<ruleset id="ImportFromBox.Rul.dll" name.dll="ImportFromBox" depends=""/>
+		<ruleset id="Populate_Fields_Using_Keywords.Rul.dll" name.dll="Populate_Fields_Using_Keywords" depends=""/>
+		<ruleset id="16" name="LocalOCR_PageIdentify" depends=""/>
+		<ruleset id="17" name="ENPO_PREPARE" depends=""/>
+		<ruleset id="18" name="LocalOCR_ExtractFields" depends=""/>
+		<ruleset id="19" name="createdoc2" depends=""/>
+		<ruleset id="20" name="ExternalOCR_PageIdentify" depends=""/>
+		<ruleset id="21" name="ExternalOCR_CreateDoc" depends=""/>
+		<ruleset id="22" name="ExternalOCR_ExtractAndRecognize" depends=""/>
+		<ruleset id="23" name="ExternalOCR_FixupRoute" depends=""/>
+	</rsc>
+	<tps>
+		<tprofile name="ScanFromDisk_MultiFormat">
+			<ruleset id="2"/>
+		</tprofile>
+		<tprofile name="PageID">
+			<ruleset id="20"/>
+			<ruleset id="21"/>
+			<ruleset id="22"/>
+			<ruleset id="23"/>
+		</tprofile>
+		<tprofile name="PageID_VendorOCR_POC">
+			<ruleset id="20"/>
+			<ruleset id="21"/>
+			<ruleset id="22"/>
+			<ruleset id="23"/>
+		</tprofile>
+		<tprofile name="Profiler">
+			<ruleset id="RecognizePagesAndFields"/>
+			<ruleset id="9"/>
+			<ruleset id="4"/>
+			<ruleset id="3"/>
+			<ruleset id="14"/>
+			<ruleset id="3"/>
+			<ruleset id="15"/>
+			<ruleset id="1"/>
+			<ruleset id="13"/>
+			<ruleset id="ValidateFields"/>
+			<ruleset id="Profile Statistics"/>
+		</tprofile>
+		<tprofile name="Verify">
+			<ruleset id="ValidateFields"/>
+		</tprofile>
+		<tprofile name="Export">
+			<ruleset id="5"/>
+			<ruleset id="6"/>
+			<ruleset id="7"/>
+			<ruleset id="ExportToFileNet.Rul.dll"/>
+			<ruleset id="Export Statistics"/>
+		</tprofile>
+		<tprofile name="FingerprintAdd">
+			<ruleset id="ImageEnhancement"/>
+			<ruleset id="8"/>
+		</tprofile>
+		<tprofile name="ScanFromDisk_SingleTIFFs">
+			<ruleset id="ImportFiles.Rul.dll"/>
+		</tprofile>
+		<tprofile name="FixUp"/>
+		<tprofile name="iVScan"/>
+		<tprofile name="Convert">
+			<ruleset id="Image_Convert"/>
+		</tprofile>
+		<tprofile name=""/>
+	</tps>
+</rsapp>
