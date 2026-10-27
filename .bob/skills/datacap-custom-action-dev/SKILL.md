@@ -136,7 +136,9 @@ public static void LogTelemetry(dynamic rrLog, string action, string pageType, s
 ---
 
 ## 5. Safe Service Stop & Dual-Deployment Lifecycle
-When compiling custom action DLLs, running Datacap background services hold open file handles. Always stop services, compile, deploy to both `C:\Datacap\RRS\` and `<AppDir>\dco_<AppName>\rules\`, and restart:
+**Use the real script first:** `C:\Datacap\ExternalOCRActions\CompileAndDeploy.bat` compiles `ExternalOCRCommon.cs`, `ExternalOCR_FileNamePageIdentify.cs`, `ExternalOCR_RecognizeField.cs`, `ExternalOCR_TestConnection.cs` with `csc.exe` (framework 4.0.30319, references System, System.Core, System.Drawing, System.Web.Extensions, Microsoft.CSharp), then copies the DLL, `.rrx` and both JSON configs to `C:\Datacap\RRS` and to the application `rules` folder. In this project only a `Restart-Service 'Datacap Rulerunner Service' -Force` was needed afterwards; stopping DCTMS and wTMService was not required. Stop all three only if the DLL copy fails with a file lock.
+
+When a lock does occur, running Datacap background services hold open file handles. Stop services, compile, deploy to both `C:\Datacap\RRS\` and `<AppDir>\dco_<AppName>\rules\`, and restart:
 
 ```bat
 @echo off

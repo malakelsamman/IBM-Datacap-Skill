@@ -79,14 +79,16 @@ if (respDict.ContainsKey("pages")) {
 ---
 
 ## 3. Hybrid Field Routing Policy
-Configure Datacap rulesets to send only relevant fields to external AI:
+Configure Datacap rulesets to send only relevant fields to external AI. Deployed state (see `externalocr_extractandrecognize.rul`):
 
 | Field Category | Technology Route | Action / Rule Implementation |
 | :--- | :--- | :--- |
-| **Handwritten Arabic** | External Vendor OCR API | `ExternalOCR_RecognizeField` (`/recognize_base64`, `handwritten`) |
-| **Machine-Printed Arabic** | Built-in OCR/PL | `RecognizeFieldOCRPL` (`RecognitionOCRPL.OCRPActions`) |
-| **Machine-Printed Numbers** | Built-in OCR/A | `RecognizeFieldOCR_A` (`RecognitionOCRA.OCRAActions`) |
+| **Handwritten and name/address Arabic** | External Vendor OCR API | `net:ExternalOCRActions.ExternalOCR_RecognizeField` (`/recognize_base64`, `handwritten`) |
+| **Numbers: NationalIdNumber, AccountNumber** | Built-in OCR/A | `RecognizeFieldOCR_A` in `net:RecognitionOCRA.OCRAActions` |
+| **AvrgMonthlyIncome** | Currently the vendor action (rule 2). The older handoff skill says it is a local checkbox; decide and keep one. | |
 | **Checkboxes / Choice Lists** | Datacap OMR | Built-in OMR action library |
+
+> `RecognizeFieldOCRPL` is **not** used: the PL library fails with RRS error 17000008 in this install (see `datacap-rrs-diagnostic-debugger`). Do not route machine-printed Arabic to it.
 
 ---
 

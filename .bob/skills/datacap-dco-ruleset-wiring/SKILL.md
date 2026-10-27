@@ -37,38 +37,44 @@ When binding rules to multiple field types via `dcomap.open`, **Datacap Rulerunn
 
 ```xml
 <!-- ✅ CORRECT: Semicolon delimited -->
-<rule name="Handwritten Vendor OCR Routing" id="2" dcomap.open="F=AccountHolderName;F=AccountNumber;F=EmployerName2">
+<rule name="Handwritten Vendor OCR Routing" id="2" dcomap.open="F=AccountHolderName;F=EmployerName2;F=AvrgMonthlyIncome">
   <func name="Recognize Field">
     <a name="Execute" ns="net:ExternalOCRActions.ExternalOCR_RecognizeField" />
   </func>
 </rule>
 
-<!-- ❌ INCORRECT: Comma separated (matches only AccountHolderName, drops AccountNumber) -->
-<rule name="Handwritten Routing" id="2" dcomap.open="F=AccountHolderName,AccountNumber,EmployerName2">
+<!-- ❌ INCORRECT: Comma separated (matches only AccountHolderName, drops the rest) -->
+<rule name="Handwritten Routing" id="2" dcomap.open="F=AccountHolderName,EmployerName2,AvrgMonthlyIncome">
 ```
 
 ---
 
 ## 3. Hybrid OCR Routing Pattern in Rulesets (.rul)
-Split recognition rules cleanly based on character set and print style:
+Split recognition rules by character set. This is the **deployed** pattern (`externalocr_extractandrecognize.rul`, ruleset 22):
 
 ```xml
-<!-- Example: Machine-printed Arabic text routed to OCR/PL -->
-<rule name="Machine Printed OCRPL Routing" id="3" dcomap.open="F=FullNameArabic;F=FamilyNameArabic;F=AddressArabic;F=NationalIdNumber;F=EmployerName">
-  <func name="Recognize Machine Printed Field">
-    <a name="RecognizeFieldOCRPL" ns="RecognitionOCRPL.OCRPActions" />
+<!-- Rule 2: handwritten / name / address fields to the vendor action -->
+<rule name="Vendor OCR Routing" id="2" dcomap.open="F=AccountHolderName;F=EmployerName2;F=AvrgMonthlyIncome;F=FullNameArabic;F=FamilyNameArabic;F=AddressArabic;F=EmployerName">
+  <func name="Recognize Field with Vendor OCR">
+    <a name="rrSet" ns="rrunner.dll"><p name="varSource" v="RTL"/><p name="varTarget" v="@F.hr_bidi"/></a>
+    <a name="rrSet" ns="rrunner.dll"><p name="varSource" v="ar-EG"/><p name="varTarget" v="@F.hr_locale"/></a>
+    <a name="Execute" ns="net:ExternalOCRActions.ExternalOCR_RecognizeField"><p name="parameters" type="string"/></a>
   </func>
 </rule>
 
-<!-- Example: Handwritten Arabic text routed to External Vendor OCR -->
-<rule name="Handwritten Vendor OCR Routing" id="2" dcomap.open="F=AccountHolderName;F=AccountNumber;F=EmployerName2">
-  <func name="Recognize Handwritten Field">
-    <a name="Execute" ns="net:ExternalOCRActions.ExternalOCR_RecognizeField">
-      <p name="parameters" type="string" />
-    </a>
+<!-- Rule 3: numbers to Datacap OCR/A (no vendor call) -->
+<rule name="OCR_A Numeric Routing" id="3" dcomap.open="F=NationalIdNumber;F=AccountNumber">
+  <func name="Recognize Numeric Field with OCR_A">
+    <a name="RecognizeFieldOCR_A" ns="net:RecognitionOCRA.OCRAActions"/>
   </func>
 </rule>
 ```
+`RecognizeFieldOCRPL` is not used (fails with 17000008). To pass a per-field option, fill the `parameters` string, for example `enable_line_segmentation=true`.
+
+## 3b. Ruleset 23 and profile mapping
+- Ruleset 23 `ExternalOCR_FixupRoute` routes `P=Other` pages to Fixup (see `datacap-fixup-manual-routing`). Put it **last** in the profile.
+- The Navigator `PageID` task runs profile **`PageID_VendorOCR_POC`** (confirmed by log names `pageid_vendorocr_poc_rrs.log`). Keep both `PageID` and `PageID_VendorOCR_POC` listing 20, 21, 22, 23.
+- Studio may add empty profiles (`FixUp`, `iVScan`, one with a blank name) to `collection.xml`. They are harmless.
 
 ---
 

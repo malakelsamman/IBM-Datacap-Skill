@@ -35,7 +35,9 @@ When fields are empty or not appearing in Datacap Studio Test/Verify panels, che
 
 ## 3. Log Analysis Workflow
 
-1. Open `GoldenDemo\batches\<BatchID>\<TaskName>_rrs.log`.
+> **Log names follow the profile, not the task.** The Navigator PageID task runs profile `PageID_VendorOCR_POC`, so its log is `pageid_vendorocr_poc_rrs.log`. Other logs: `profiler_rrs.log`, `export_rrs.log`.
+
+1. Open `GoldenDemo\batches\<BatchID>\<ProfileName>_rrs.log`.
 2. Trace the execution tree:
    ```
    calling action <ActionName> () on F:<FieldName>
@@ -46,3 +48,14 @@ When fields are empty or not appearing in Datacap Studio Test/Verify panels, che
    - Check `<F id="...">` node.
    - Verify `<V n="STATUS">0</V>` (0 = valid, 1 = low confidence / review needed).
    - Verify character nodes `<C cn="10" cr="...">...</C>`.
+
+## 4. Queue and Routing Symptoms
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Batch sits at `PageID/pending` and never runs | Repointed with `SaveBatchAttribute`; Rulerunner ignores it | Do not repoint. Use a raised condition (`datacap-fixup-manual-routing`) or abandon and resubmit |
+| Parent stays `Profiler/waiting` | Normal: it waits for its Fixup child | Complete the Fixup child; releasing it merges the parent |
+| Fixup child never appears | Ruleset 23 missing from the profile that PageID really runs, or Rulerunner not restarted | Add id 23 to `PageID_VendorOCR_POC` (and `PageID`), restart Rulerunner |
+| Unattended Fixup errors | FixUp was added to `Rulerunner.xml` | Remove it: FixUp is manual |
+| Condition names | `Route To Fixup` (PageID), `Requires Verify` (Profiler) | Check Studio workflow |
+| `FixUp.xml` missing | The child was not grabbed yet | `GrabBatch` first |

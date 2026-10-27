@@ -17,26 +17,20 @@ To ensure consistency across Datacap Studio Zones tab, Rulerunner execution, and
 ---
 
 ## 2. Standard Normalized Field Coordinates (`external_crop_config.json`)
-When zones are not yet bound, use normalized ratios ($0.0 \dots 1.0$) relative to full image width and height:
+When zones are not yet bound, use normalized ratios (0.0 to 1.0) relative to full image width and height.
 
+**Do not copy numbers from this skill.** The live values are in `ExternalOCRActions\src\external_crop_config.json` (deployed copies in `C:\Datacap\RRS` and the app `rules` folder). Earlier sample values in this guide were stale (for example `AccountHolderName` x 0.23 vs the real x 0.5584) and have been removed.
+
+Schema, per page type and field:
 ```json
-{
-  "fields": {
-    "Signature_Form_1": {
-      "AccountHolderName": { "x": 0.23, "y": 0.130, "width": 0.67, "height": 0.058, "document_type": "handwritten", "language": "Arabic/Latest" },
-      "AccountNumber":     { "x": 0.10, "y": 0.188, "width": 0.84, "height": 0.068, "document_type": "handwritten", "language": "Arabic/Latest" }
-    },
-    "Form_Page_1": {
-      "EmployerName2":     { "x": 0.22, "y": 0.224, "width": 0.67, "height": 0.048, "document_type": "handwritten", "language": "Arabic/Latest" },
-      "AvrgMonthlyIncome": { "x": 0.18, "y": 0.298, "width": 0.72, "height": 0.120, "document_type": "handwritten", "language": "Arabic/Latest" }
-    },
-    "National ID Front": {
-      "FullNameArabic":   { "x": 0.33, "y": 0.042, "width": 0.38, "height": 0.060, "document_type": "typewritten", "language": "Arabic/Latest" },
-      "NationalIdNumber": { "x": 0.18, "y": 0.173, "width": 0.60, "height": 0.058, "document_type": "typewritten", "language": "Arabic/Latest" }
-    }
-  }
-}
+{ "fields": { "<PageType>": { "<FieldId>": {
+    "x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0,
+    "document_type": "handwritten", "language": "Arabic/Latest",
+    "enable_line_segmentation": true } } } }
 ```
+- `document_type` is `handwritten` for every field the vendor engine receives. The vendor model rejects `typewritten` with HTTP 400 (see `local-ai-ocr-integration`); the current file uses `handwritten` even for National ID fields.
+- `enable_line_segmentation` is optional per field and overrides the global setting (see `vendor-ocr-rest-client-actions` section 1b).
+- After editing, copy to all three locations and restart Rulerunner.
 
 ---
 

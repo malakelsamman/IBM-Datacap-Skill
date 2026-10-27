@@ -45,10 +45,10 @@ Arabic OCR and RTL rendering engines often flip numeric strings or insert direct
 3. **Reordering Logic**: If OCR returns text in reverse RTL order, reverse the digit sequence before committing to DCO.
 
 ## 3. Faint Dot-Matrix Ink & Stamp Preservation
-Fields like `EmployerName` (`شركة بيوت الأزياء الراقية`) are printed using dot-matrix ink (red or light blue) or stamped:
+Employer names such as `شركة بيوت الأزياء الراقية` (NPA form field `EmployerName2`) are printed using dot-matrix ink (red or light blue) or stamped. The National ID field `EmployerName` ("جهة العمل") was **removed** from Studio and FileNet; see `datacap-field-lifecycle-change`.
 - **Avoid Heavy Binarization / Contrast Stretching**: Aggressive Otsu thresholding or high-contrast filters erode dot-matrix dots and fragment characters.
 - **Pass Raw Crops**: Supply uncompressed 24-bit/32-bit PNG crops directly to the recognition model.
-- **Line Segmentation**: For multi-line stamps/signatures, keep full bounding boxes so descending glyphs are not clipped.
+- **Line Segmentation**: For multi-line handwriting (for example `AccountHolderName` on the signature form), set `enable_line_segmentation` for that field in `external_crop_config.json`; keep the full bounding box so descending glyphs are not clipped. An empty returned line is retried by `RetryEmptyLine`.
 
 ## 4. Arabic Zone Padding Rules
 Arabic script flows right-to-left. Letter ligatures and initial tooth extensions (`س`, `ش`, `ي`, `ص`) often extend into neighboring margins:

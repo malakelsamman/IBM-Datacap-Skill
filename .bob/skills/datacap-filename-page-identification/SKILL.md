@@ -16,6 +16,8 @@ Use this guide to implement and configure fast, non-OCR page identification in I
 
 ## 2. Ingested Filename Resolution Strategy
 
+> **Verified on the live system:** the deployed action ([`ExternalOCR_FileNamePageIdentify.cs`](../../../ExternalOCRActions/src/ExternalOCR_FileNamePageIdentify.cs)) lower-cases the name from **`ScanSrcPath`, falling back to `PageName`**. For batches created by the portal, these two values are written into `nscan.xml` at intake (see `datacap-portal-batch-lifecycle`). The `VScan.xml` source below applies to scan-from-disk batches. Fingerprint ids: Signature_Form_1 = 569, Form_Page_1 = 570, National ID Front = 568.
+
 At runtime, Datacap renames ingested page images to standard batch tokens (e.g. `TM000001.jpg`). To recover the original client filename, check the following sources in order:
 
 ```csharp
@@ -76,7 +78,7 @@ public static string MatchPageType(string fileName)
 
 ### Safe Fallback Rules:
 - **Never default silently to a specific document type** (e.g., never default unknown files to National ID).
-- Leave unclassified pages as `Other` or flag them for verification (`CurrentDCO.Status = 1`).
+- Leave unclassified pages as `Other` with `Status = 1`. **Then route them to Fixup**: ruleset 23 `ExternalOCR_FixupRoute` splits the batch to the Fixup job so an operator classifies the page and types the fields (see `datacap-fixup-manual-routing`). Do not leave them to fail later in extraction.
 - Log the source filename and fallback reason clearly in the batch execution log.
 
 ---

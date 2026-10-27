@@ -7,7 +7,14 @@ Welcome to the **IBM Datacap AI & Local OCR Integration Suite**. This repository
 ## 📚 Repository Structure & Components
 
 ```
-├── .bob/skills/                               <- Reusable AI Agent Skills (10 Skills)
+├── .bob/skills/                               <- Reusable AI Agent Skills (17 Skills)
+│   ├── datacap-wtm-rest-api/                  <- [NEW] Verified wTM REST endpoints, payloads & quirks
+│   ├── datacap-fixup-manual-routing/          <- [NEW] Route unidentified pages to Fixup, manual classification & entry
+│   ├── datacap-portal-batch-lifecycle/        <- [NEW] Intake, stage tracking, proof of export to FileNet
+│   ├── datacap-role-portal-architecture/      <- [NEW] Bilingual multi-persona portal in front of Datacap
+│   ├── datacap-field-lifecycle-change/        <- [NEW] Add/remove a field across Datacap, FileNet & portal
+│   ├── windows-text-encoding-safety/          <- [NEW] Keep Arabic text intact on Windows PowerShell
+│   ├── datacap-demo-ops-and-e2e-verification/ <- [NEW] Restart matrix, end-to-end tests, cleanup, pre-demo checklist
 │   ├── datacap-parallel-pipeline-migration/   <- [NEW] Parallel POC & non-destructive migration blueprints
 │   ├── datacap-filename-page-identification/  <- [NEW] Fast non-OCR filename page classification & VScan parsing
 │   ├── vendor-ocr-rest-client-actions/        <- [NEW] Cropped field REST client, Base64 & DCO Unicode <C> nodes
@@ -37,12 +44,16 @@ Welcome to the **IBM Datacap AI & Local OCR Integration Suite**. This repository
 │   ├── RRS/LocalOCRActions.rrx                <- Action metadata for Datacap Studio
 │   └── CompileAndDeploy.bat                   <- Application-specific compiler script
 ├── GoldenDemo/dco_GoldenDemo/                 <- Datacap Application Configuration
+│   ├── rules/externalocr_fixuproute.rul       <- Ruleset 23: Route unidentified pages (Other) to Fixup
 │   ├── rules/externalocr_extractandrecognize.rul <- Ruleset 22: Hybrid field recognition routing
 │   ├── rules/externalocr_createdoc.rul        <- Ruleset 21: Batch-level document assembly
 │   ├── rules/externalocr_pageidentify.rul     <- Ruleset 20: Filename-based page identification
 │   ├── rules/collection.xml                   <- Task profile execution sequence
 │   ├── GOLDENDEMO.XML & goldendemo.xmb        <- DCO document hierarchy & rule bindings
 │   └── PageID_VendorOCR_POC.set.xml           <- Parallel POC task configuration
+├── EgyptPostPortal/                           <- Role-based Arabic/English web portal (Node.js, no dependencies)
+│   ├── server.js                              <- API + static server; proxies a whitelist of wTM REST calls
+│   └── public/                                <- index.html, app.js, styles.css
 ├── Test-VendorOCR-POC.ps1                     <- End-to-end verification script
 └── DATACAP_LOCAL_OCR_BLUEPRINT.md             <- Master Architectural Blueprint
 ```
@@ -51,10 +62,17 @@ Welcome to the **IBM Datacap AI & Local OCR Integration Suite**. This repository
 
 ## 🎯 Reusable Agent Skills Overview ([`.bob/skills/`](.bob/skills/))
 
-These 10 skills teach AI agents (like IBM Bob) how to automate, troubleshoot, and build Datacap tasks according to enterprise standards:
+These 17 skills teach AI agents (like IBM Bob) how to automate, troubleshoot, and build Datacap tasks according to enterprise standards:
 
 | Skill | Description & Key Topics | When to Use |
 | :--- | :--- | :--- |
+| **`datacap-wtm-rest-api`** *(NEW)* | Verified `ServicewTM.svc` calls: logon, create/upload batch, grab/release, `GetFile`/`SetFile`, `GetBatchList`, statistics, admin; plus known quirks (`AbandonBatch` hard delete, `CheckIntegrity` 500, repointing does not work). | When building a portal, script or test harness against a live Datacap application. |
+| **`datacap-fixup-manual-routing`** *(NEW)* | Ruleset 23 (`Task_NumberOfSplits` + `Task_RaiseCondition`), parent/child merge, `FixUp.xml` (not `PageID.xml`), the XML written for manual classification, auto-passing Verify. | When unrecognised pages must go to an operator for manual classification and field entry. |
+| **`datacap-portal-batch-lifecycle`** *(NEW)* | Intake via `nscan.xml`, the state machine (`processing`, `fixup`, `review`, `exporting`, `filed`), `Export.xml` `Doc_ID` as proof of export, hand-off log. | When a portal must show users where a batch is and notify them when it reaches FileNet. |
+| **`datacap-role-portal-architecture`** *(NEW)* | Persona model driven by the Datacap account, server-side authorisation, Arabic RTL/English toggle, running the portal as a scheduled task. | When creating or extending the Egypt Post demo portal or a similar front end. |
+| **`datacap-field-lifecycle-change`** *(NEW)* | 12-step checklist across Setup DCO, rulesets, crop config, export config, FileNet class and portal. | When a field is added to, or removed from, the capture-to-FileNet chain. |
+| **`windows-text-encoding-safety`** *(NEW)* | Why PowerShell corrupts Arabic, which tools are safe, how to verify. | Before writing Arabic to any file on Windows. |
+| **`datacap-demo-ops-and-e2e-verification`** *(NEW)* | Restart matrix, scripted end-to-end test for the review and Fixup paths, cleanup, pre-demo checklist, open items. | Before a demo or after changing rules, DLLs, configs or the portal. |
 | **`datacap-parallel-pipeline-migration`** *(NEW)* | Blueprints for zero-collision parallel POC workflows in Datacap without modifying or breaking legacy actions, rulesets, DLLs, or task profiles. | When migrating to a new OCR engine or adding a parallel POC flow. |
 | **`datacap-filename-page-identification`** *(NEW)* | Fast page classification from client filenames or metadata via `VScan.xml` parsing without calling OCR or template matching. | When ingesting controlled file batches or avoiding expensive OCR on page classification. |
 | **`vendor-ocr-rest-client-actions`** *(NEW)* | Implementing custom C# field-level REST API clients for external OCR services with in-memory zone cropping and Unicode decimal `<C>` serialization. | When building field-level OCR actions that communicate with remote AI/OCR endpoints. |
@@ -77,7 +95,7 @@ $$\text{VScan} \longrightarrow \text{PageID (Identify by Filename)} \longrightar
 ### 2. Semicolon DCO Map Syntax
 ```xml
 <!-- ✅ CORRECT: Semicolon delimited -->
-<rule name="Handwritten Vendor OCR Routing" id="2" dcomap.open="F=AccountHolderName;F=AccountNumber;F=EmployerName2">
+<rule name="Vendor OCR Routing" id="2" dcomap.open="F=AccountHolderName;F=EmployerName2;F=AvrgMonthlyIncome">
   <func name="Recognize Field">
     <a name="Execute" ns="net:ExternalOCRActions.ExternalOCR_RecognizeField" />
   </func>
@@ -85,15 +103,26 @@ $$\text{VScan} \longrightarrow \text{PageID (Identify by Filename)} \longrightar
 ```
 
 ### 3. Hybrid OCR Routing Architecture
-* **Handwritten Arabic Fields** (`AccountHolderName`, `AccountNumber`, `EmployerName2`): Routed to `ExternalOCR_RecognizeField` calling the Vendor OCR REST API (`/recognize_base64`, `document_type="handwritten"`, `Arabic/Latest`).
-* **Machine-Printed Fields** (`FullNameArabic`, `FamilyNameArabic`, `AddressArabic`, `NationalIdNumber`, `EmployerName`): Routed to built-in Datacap OCR/PL (`RecognizeFieldOCRPL`) or OCR/A (`RecognizeFieldOCR_A`).
-* **Checkbox Fields** (`AvrgMonthlyIncome`): Preserved under Datacap OMR.
+Source of truth: `GoldenDemo/dco_GoldenDemo/rules/externalocr_extractandrecognize.rul`.
+* **Vendor OCR rule** (`AccountHolderName`, `EmployerName2`, `AvrgMonthlyIncome`, `FullNameArabic`, `FamilyNameArabic`, `AddressArabic`, `EmployerName`): `ExternalOCR_RecognizeField` calling the Vendor OCR REST API (`/recognize_base64`, `document_type="handwritten"`, `Arabic/Latest`). Line segmentation can be set globally, per field in `external_crop_config.json`, or by rule parameter.
+* **OCR/A rule** (`NationalIdNumber`, `AccountNumber`): Datacap `RecognizeFieldOCR_A`, no vendor call.
+* `RecognizeFieldOCRPL` is not used (fails with RRS error 17000008 on this install).
+* **Unidentified pages** (`Other`): ruleset 23 splits the batch to the Fixup job for manual classification (see `datacap-fixup-manual-routing`).
+
+### 4. Egypt Post Portal (`EgyptPostPortal/`)
+A role-based Arabic/English web portal at `http://localhost:8180` that talks to the live Datacap wTM REST service. The Datacap account decides the view:
+* **Mona** (counter clerk): submit forms and follow the batch. The tracker shows when a batch was routed to manual handling (Fixup) and when it was sent to FileNet.
+* **Tarek** (verification officer): review queue, unclassified pages (manual classification and field entry), and an export-tracking screen with a notification when a batch reaches FileNet from either path.
+* **Dr. Hala** (supervisor, the Datacap `admin` account): overview, batch monitor (priority, hold/resume, history, delete), team and access, system setup, correction log, system status.
+* **Karim** (auditor): correction log and batches (account not created yet).
+
+Run: `node EgyptPostPortal/server.js` (the demo machine runs it as the Windows scheduled task `EgyptPostPortal`). Demo credentials are intentionally not stored in this repository.
 
 ---
 
 ## 🚀 How to Build & Deploy
 
 1. **Build and Deploy Actions**:
-   Run `ExternalOCRActions\CompileAndDeploy.bat` from an administrator command prompt. The script cleanly stops Datacap services, builds with .NET Framework 4.8 `csc.exe`, deploys to `C:\Datacap\RRS\` and `GoldenDemo\dco_GoldenDemo\rules\`, and restarts the services.
+   Run `ExternalOCRActions\CompileAndDeploy.bat` from an administrator command prompt. The script builds with the .NET Framework 4.0.30319 `csc.exe` and deploys the DLL, `.rrx` and both JSON configs to `C:\Datacap\RRS\` and `GoldenDemo\dco_GoldenDemo\rules\`. Afterwards run `Restart-Service 'Datacap Rulerunner Service' -Force`.
 2. **Execute End-to-End Verification**:
    Run `Test-VendorOCR-POC.ps1` in PowerShell to test API health, field cropping, recognition, and legacy flow isolation.

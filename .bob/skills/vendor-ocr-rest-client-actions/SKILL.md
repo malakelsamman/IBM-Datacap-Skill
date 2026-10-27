@@ -12,8 +12,30 @@ This guide establishes the pattern for building custom C# Datacap actions that e
 ### Crucial Security & Operational Rules:
 1. **Never send full page images to field OCR endpoints**: Always crop strictly to the target field zone.
 2. **Never log Base64 payload data or full PII**: Keep logs clean and structured.
-3. **Never edit `tm*.xml` directly**: Always populate DCO values through standard Datacap DCO APIs (`CurrentDCO.Text = ...`).
+3. **Custom actions never edit `tm*.xml` directly**: Populate DCO values through the DCO API (`CurrentDCO.Text = ...`). The only legitimate direct writers of `tm*.xml` are the portal's Verify and Fixup flows, which go through wTM `Queue/SetFile` (see `datacap-wtm-rest-api`).
 4. **Never guess values on API failure**: On HTTP error or empty response, set `CurrentDCO.VerificationStatus = 1;` and return failure cleanly.
+
+### Deployed routing (source of truth: `externalocr_extractandrecognize.rul`)
+| Rule | Fields | Engine |
+|---|---|---|
+| 2 Vendor OCR Routing | AccountHolderName, EmployerName2, AvrgMonthlyIncome, FullNameArabic, FamilyNameArabic, AddressArabic, EmployerName | `net:ExternalOCRActions.ExternalOCR_RecognizeField` |
+| 3 OCR_A Numeric Routing | NationalIdNumber, AccountNumber | `RecognizeFieldOCR_A` in `net:RecognitionOCRA.OCRAActions` (Datacap OCR/A, no vendor call) |
+
+`AccountNumber` and `NationalIdNumber` are **not** sent to the vendor. If this table and the `.rul` file disagree, the `.rul` file wins; update this table.
+
+---
+
+## 1b. Line segmentation and settings (verified in code)
+`enable_line_segmentation` is resolved in this order, later wins:
+1. `external_ocr_settings.json` global value (`C:\Datacap\RRS\...`, currently `false`). Search order: DLL folder, `C:\Datacap\RRS`, then the app `rules` folder.
+2. Per-field `enable_line_segmentation` in `external_crop_config.json` (`fields.<PageType>.<Field>`), applied in `ExternalOCR_RecognizeField.cs`. `Signature_Form_1 / AccountHolderName` is `true`.
+3. Rule parameter string, for example `enable_line_segmentation=true`, passed to `Execute(parameters)`.
+
+When true, the request adds `"enable_line_segmentation": "true"` (`ExternalOCRCommon.cs`, `/recognize_base64`). `RetryEmptyLine` re-sends a crop when a returned line is empty (this fixed the missing first word "سعيد").
+
+Config files exist in three places and must be copied together: `ExternalOCRActions\src`, `C:\Datacap\RRS`, and `GoldenDemo\dco_GoldenDemo\rules`. `CompileAndDeploy.bat` does this. Restart Rulerunner afterwards.
+
+Status: the signature-form change (segmentation on `AccountHolderName`, OCR/A on `AccountNumber`) is wired, but has **not been confirmed on a real batch**. Test it before claiming it works.
 
 ---
 

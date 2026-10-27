@@ -34,3 +34,10 @@ description: Configure, diagnose, and troubleshoot IBM Datacap to IBM FileNet Co
 1. Validate object store connectivity via CEWS search tool.
 2. Confirm target document class exists and contains all required custom properties.
 3. Check versioning policy: Major vs. Minor version check-in.
+
+## 4. Proving an export (verified on this system)
+- **In Datacap:** after Export, the parent queue row reads `Export / Job done` and `Export.xml` in the batch folder holds `<V n="Folder_ID">` for the batch and one `<V n="Doc_ID">{...}</V>` per exported document. No `Doc_ID` means nothing was filed (the portal calls this state `empty`).
+- **In FileNet:** use the read-only CEWS MCP tools: `cews_execute_search` (for example `SELECT Id, Name FROM Document WHERE ...`) and `cews_get_object` with the `Doc_ID`. Repository id `ECM`.
+- **Do not use the GraphQL-based tools** (`update_folder_security`, `core-cs` GraphQL calls): they do not work on this setup. CEWS tools do.
+- Example result: an `NPAForm` document carrying the typed `EmployerName2` and `AvrgMonthlyIncome` values.
+- If a Datacap field was removed, check the property is also removed from the FileNet class and disabled in `ExportToFileNet.Rul.dll.config` (see `datacap-field-lifecycle-change`). Restart Rulerunner after config edits.

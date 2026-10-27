@@ -38,7 +38,7 @@ graph TD
         P2 --> P3[ExternalOCR_CreateDoc: Batch Level CreateDocuments]
         P3 --> P4[ExternalOCR_ExtractAndRecognize]
         P4 -->|Handwritten Fields| P5[ExternalOCR_RecognizeField: Vendor API]
-        P4 -->|Machine Printed Fields| P6[RecognizeFieldOCRPL / OCR/A]
+        P4 -->|Numeric Fields| P6[RecognizeFieldOCR_A]
         P4 -->|Checkboxes| P7[Datacap OMR]
     end
 
@@ -63,7 +63,12 @@ graph TD
 3. **Ruleset 22 (`externalocr_extractandrecognize.rul`)**:
    - Rule 1 (Page level): Set RTL bidi, Arabic locale, call `CreateFields()`
    - Rule 2 (Handwritten fields): `dcomap.open="F=Field1;F=Field2"` $\rightarrow$ `ExternalOCR_RecognizeField`
-   - Rule 3 (Printed fields): `dcomap.open="F=Field3;F=Field4"` $\rightarrow$ `RecognizeFieldOCRPL`
+   - Rule 3 (Numeric fields): `dcomap.open="F=NationalIdNumber;F=AccountNumber"` $\rightarrow$ `RecognizeFieldOCR_A` (`net:RecognitionOCRA.OCRAActions`). `RecognizeFieldOCRPL` is not used (RRS error 17000008).
+
+### Step 1b: Ruleset 23 (added later)
+`externalocr_fixuproute.rul`, id 23, `ExternalOCR_FixupRoute`: page-level rule on `P=Other` that splits the batch to the Fixup job. Add it after 22 in both profiles. Full details in `datacap-fixup-manual-routing`.
+
+> **Profile mapping:** the Navigator `PageID` task really runs `PageID_VendorOCR_POC`. Keep `PageID` and `PageID_VendorOCR_POC` in sync (20, 21, 22, 23). Rulerunner reads `collection.xml` only at start: restart it after edits.
 
 ### Step 2: Register in `collection.xml` & `<AppName>.app`
 Add rulesets and the new task profile to `collection.xml`:
