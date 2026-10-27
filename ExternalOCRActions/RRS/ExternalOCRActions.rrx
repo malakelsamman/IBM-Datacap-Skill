@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rrx namespace="ExternalOCRActions" v="1.0.0">
+  <g>
+    <net ref="ExternalOCRActions.ExternalOCR_FileNamePageIdentify" qi=": Classifies page from filename prefix">
+      <method name="Execute">
+        <p name="parameters" type="string"/>
+      </method>
+    </net>
+    <net ref="ExternalOCRActions.ExternalOCR_RecognizeField" qi=": Performs field-level recognition using external Vendor OCR API">
+      <method name="Execute">
+        <p name="parameters" type="string"/>
+      </method>
+    </net>
+    <net ref="ExternalOCRActions.ExternalOCR_TestConnection" qi=": Tests connectivity to external Vendor OCR API">
+      <method name="Execute">
+        <p name="parameters" type="string"/>
+      </method>
+    </net>
+  </g>
+</rrx>

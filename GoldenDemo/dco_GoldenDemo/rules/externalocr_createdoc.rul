@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ruleset id="21" name="ExternalOCR_CreateDoc" ver="1" modder="admin.1" qi="">
+	<rule name="Create Documents Structure Only" id="1" dcomap.open="B" qi="Creates document hierarchy at batch level without fields">
+		<func name="Stop If Documents Exist" disabled="False" qi="Prevent duplicate document creation on rollback">
+			<a ns="com:Datacap.Libraries.ApplicationObjects.Actions" name="IsDocumentCountMoreThan" disabled="" qi="Do not create documents again if they already exist.">
+				<p name="Count" v="1"/>
+				<p name="ReturnTrueIfMore" v="True"/>
+			</a>
+		</func>
+		<func name="Create Document Hierarchy" disabled="False" qi="Creates document objects">
+			<a name="CreateDocuments" ns="com:Datacap.Libraries.ApplicationObjects.Actions" disabled="False"/>
+			<a name="SetReturnValue" ns="rrunner.dll" qi="Pass to next step">
+				<p type="bInter" name="bInter"/>
+				<p type="bDebug" name="bDebug"/>
+				<p type="strParam" v="True" name="StrParam"/>
+			</a>
+		</func>
+	</rule>
+</ruleset>

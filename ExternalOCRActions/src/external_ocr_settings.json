@@ -1,0 +1,11 @@
+{
+  "_comment": "Runtime configuration for ExternalOCRActions (Vendor OCR POC).",
+  "base_url": "http://34.69.150.249:8019",
+  "language": "Arabic/Latest",
+  "document_type": "handwritten",
+  "batch_size": 1,
+  "timeout_seconds": 60,
+  "enable_line_segmentation": false,
+  "prefer_base64": true,
+  "padding_pixels": 4
+}

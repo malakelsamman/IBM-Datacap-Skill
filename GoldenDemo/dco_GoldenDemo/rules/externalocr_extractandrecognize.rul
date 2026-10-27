@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ruleset id="22" name="ExternalOCR_ExtractAndRecognize" ver="1" modder="admin.1" qi="">
+	<rule name="Page Level Setup" id="1" dcomap.open="P" qi="Create fields, set Arabic RTL bidi and OCRPL engine parameters">
+		<func name="Setup Page Fields">
+			<a name="rrSet" ns="rrunner.dll" qi="Set Arabic right-to-left orientation">
+				<p name="varSource" v="RTL"/>
+				<p name="varTarget" v="@P.hr_bidi"/>
+			</a>
+			<a name="rrSet" ns="rrunner.dll" qi="Set Arabic locale for OCR engine">
+				<p name="varSource" v="ar-EG"/>
+				<p name="varTarget" v="@P.hr_locale"/>
+			</a>
+			<a name="rrSet" ns="rrunner.dll" qi="Set Arabic OCRPL language">
+				<p name="varSource" v="Arabic"/>
+				<p name="varTarget" v="@P.pl_language"/>
+			</a>
+			<a name="rrSet" ns="rrunner.dll" qi="Set Arabic OCRPL writing style">
+				<p name="varSource" v="Arabic"/>
+				<p name="varTarget" v="@P.pl_writingStyle"/>
+			</a>
+			<a name="CreateFields" ns="com:Datacap.Libraries.ApplicationObjects.Actions" qi="Create page fields defined in Setup DCO"/>
+		</func>
+	</rule>
+	<rule name="Vendor OCR Routing" id="2" dcomap.open="F=AccountHolderName;F=EmployerName2;F=AvrgMonthlyIncome;F=FullNameArabic;F=FamilyNameArabic;F=AddressArabic;F=EmployerName" qi="Route Arabic handwritten and text fields to Vendor OCR API with proper RTL ordering">
+		<func name="Recognize Field with Vendor OCR">
+			<a name="rrSet" ns="rrunner.dll" qi="Set field right-to-left orientation">
+				<p name="varSource" v="RTL"/>
+				<p name="varTarget" v="@F.hr_bidi"/>
+			</a>
+			<a name="rrSet" ns="rrunner.dll" qi="Set field Arabic locale">
+				<p name="varSource" v="ar-EG"/>
+				<p name="varTarget" v="@F.hr_locale"/>
+			</a>
+			<a name="Execute" ns="net:ExternalOCRActions.ExternalOCR_RecognizeField">
+				<p name="parameters" type="string"/>
+			</a>
+		</func>
+	</rule>
+	<rule name="OCR_A Numeric Routing" id="3" dcomap.open="F=NationalIdNumber;F=AccountNumber" qi="Route numeric fields to OCR/A RecognitionOCRA engine">
+		<func name="Recognize Numeric Field with OCR_A">
+			<a name="RecognizeFieldOCR_A" ns="net:RecognitionOCRA.OCRAActions" qi="Recognize zoned numeric field using OCR/A"/>
+		</func>
+	</rule>
+</ruleset>

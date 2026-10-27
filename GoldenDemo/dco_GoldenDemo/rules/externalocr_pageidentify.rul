@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ruleset id="20" name="ExternalOCR_PageIdentify" ver="1" modder="admin.1" qi="">
+	<rule name="Identify Page By Filename" id="1" dcomap.open="P" qi="Identifies page type based on incoming image filename prefix">
+		<func name="Identify By Filename Function">
+			<a name="Execute" ns="net:ExternalOCRActions.ExternalOCR_FileNamePageIdentify">
+				<p name="parameters" type="string"/>
+			</a>
+		</func>
+	</rule>
+</ruleset>

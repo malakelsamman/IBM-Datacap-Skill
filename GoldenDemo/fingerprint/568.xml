@@ -1,0 +1,21 @@
+<S>
+  <P type="Other">
+    <V n="HostID">18</V>
+    <V n="HostName">national id</V>
+    <F type="FullNameArabic">
+      <V n="Position">1180,70,1690,310</V>
+    </F>
+    <F type="FamilyNameArabic">
+      <V n="Position">1428,316,1627,378</V>
+    </F>
+    <F type="AddressArabic">
+      <V n="Position">1152,370,1631,448</V>
+    </F>
+    <F type="NationalIdNumber">
+      <V n="Position">1054,507,1669,589</V>
+    </F>
+    <F type="EmployerName">
+      <V n="Position">1141,1400,1521,1457</V>
+    </F>
+  </P>
+</S>

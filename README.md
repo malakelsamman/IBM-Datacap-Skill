@@ -1,94 +1,86 @@
-# IBM Datacap AI & Local OCR Integration Suite (v1.0.0)
+# IBM Datacap AI & Local OCR Integration Suite (v2.0.0)
 
-Welcome to the **IBM Datacap AI & Local OCR Integration Suite**. This repository contains production-ready C# custom actions, Datacap Rulerunner rulesets, reusable agent skills, architectural blueprints, and boilerplate templates to integrate **IBM Datacap** with on-premise AI/OCR models and export classified documents directly to **IBM FileNet Content Services**.
+Welcome to the **IBM Datacap AI & Local OCR Integration Suite**. This repository contains production-ready C# custom actions, Datacap Rulerunner rulesets, reusable agent skills, architectural blueprints, and boilerplate templates to integrate **IBM Datacap** with on-premise AI/OCR models, process complex Arabic forms and Egyptian National IDs, and export classified documents directly to **IBM FileNet Content Services**.
 
 ---
 
-## 📚 What Was Created & Pushed?
-
-Here is a breakdown of every component in this repository, where it lives, and when you or your team need it:
+## 📚 Repository Structure & Components
 
 ```
-├── .bob/skills/                               <- Reusable AI Agent Skills
-│   ├── datacap-custom-action-dev/             <- Skill for authoring/compiling C# actions
-│   ├── datacap-dco-ruleset-wiring/            <- Skill for DCO bindings & collection.xml rules
-│   ├── local-ai-ocr-integration/              <- Skill for REST OCR endpoint communication
-│   └── filenet-datacap-export-troubleshooter/ <- Skill for FileNet CEWS export & permissions
+├── .bob/skills/                               <- Reusable AI Agent Skills (7 Skills)
+│   ├── datacap-arabic-document-processing/    <- Skill: Arabic RTL encoding, IDs, stamps & padding (NEW)
+│   ├── datacap-fingerprint-zone-calibration/  <- Skill: Fingerprint zones, setup DCO & coordinate fallback (NEW)
+│   ├── datacap-rrs-diagnostic-debugger/       <- Skill: RRS log analysis, error 17000008 & field drops (NEW)
+│   ├── datacap-custom-action-dev/             <- Skill: C# action authoring, character nodes & dual-deploy
+│   ├── datacap-dco-ruleset-wiring/            <- Skill: DCO bindings, hybrid OCR routing & collection.xml
+│   ├── local-ai-ocr-integration/              <- Skill: REST endpoint communication, Base64 & alternatives
+│   └── filenet-datacap-export-troubleshooter/ <- Skill: FileNet CEWS export, WSDL & security ACLs
 ├── templates/                                 <- Code & Automation Boilerplates
 │   ├── DatacapActionTemplate.cs               <- C# RRS COM reflection template
 │   ├── RRXTemplate.rrx                        <- XML metadata descriptor template
 │   └── BuildAndDeploy.bat                     <- Automated build & dual-deploy script
-├── LocalOCRActions/                           <- Production C# Custom Action Library
+├── ExternalOCRActions/                        <- External/Vendor OCR C# Action Library
+│   ├── src/                                   <- C# source code (.NET Framework 4.0)
+│   │   ├── ExternalOCRCommon.cs               <- XML zone fallback, crop resolution & candidate parser
+│   │   ├── ExternalOCR_RecognizeField.cs      <- Field-level OCR and character node builder
+│   │   ├── ExternalOCR_FileNamePageIdentify.cs<- Page identification & FingerprintID binder
+│   │   └── external_crop_config.json          <- Absolute & ratio crop fallback definitions
+│   ├── RRS/ExternalOCRActions.rrx             <- Action metadata for Datacap Studio
+│   └── CompileAndDeploy.bat                   <- Compiler and dual-deployment script
+├── LocalOCRActions/                           <- Local AI OCR C# Action Library
 │   ├── src/                                   <- C# source code (.NET Framework 4.0)
 │   ├── RRS/LocalOCRActions.rrx                <- Action metadata for Datacap Studio
-│   ├── CompileAndDeploy.bat                   <- Application-specific compiler script
-│   └── Test-LocalOCR.ps1                      <- Standalone PowerShell test harness
+│   └── CompileAndDeploy.bat                   <- Application-specific compiler script
 ├── GoldenDemo/dco_GoldenDemo/                 <- Datacap Application Configuration
-│   ├── rules/localocr_pageidentify.rul        <- Ruleset 16: LocalOCR_PageIdentify
-│   ├── rules/localocr_extractfields.rul       <- Ruleset 18: LocalOCR_ExtractFields
+│   ├── rules/externalocr_extractandrecognize.rul <- Ruleset: Hybrid field recognition routing
+│   ├── rules/externalocr_pageidentify.rul     <- Ruleset: Page ID & template binding
 │   ├── rules/collection.xml                   <- Task profile execution sequence
 │   ├── GOLDENDEMO.XML & goldendemo.xmb        <- DCO document hierarchy & rule bindings
 │   └── PageID.set.xml                         <- PageID task configuration
-├── RRS/ocr_settings.json                      <- Local OCR endpoint configuration
+├── RRS/ocr_settings.json                      <- OCR endpoint configuration
 └── DATACAP_LOCAL_OCR_BLUEPRINT.md             <- Master Architectural Blueprint
 ```
 
 ---
 
-## 🎯 Component Guide: What is it and When to use it?
+## 🎯 Reusable Agent Skills Overview ([`.bob/skills/`](.bob/skills/))
 
-### 1. Architectural Blueprint ([`DATACAP_LOCAL_OCR_BLUEPRINT.md`](DATACAP_LOCAL_OCR_BLUEPRINT.md))
-* **What is it?** The single source of truth for the entire end-to-end architecture, lifecycle execution order, and field mappings.
-* **When do you need it?** 
-  - When onboarding new team members or explaining the solution to enterprise architects.
-  - When designing new document types or adding new fields.
-  - When troubleshooting execution order (e.g. why fields got cleared during profiling).
+These skills teach AI agents (like IBM Bob) how to automate, troubleshoot, and build Datacap tasks according to enterprise standards:
 
----
-
-### 2. Reusable Bob Skills ([`.bob/skills/`](.bob/skills/))
-These skills teach AI agents (like IBM Bob) how to automate Datacap tasks according to your organization's exact standards.
-
-| Skill | What it teaches | When to use it |
+| Skill | Description & Key Topics | When to Use |
 | :--- | :--- | :--- |
-| **`datacap-custom-action-dev`** | C# COM reflection, memory management (`GC.Collect`), Rulerunner return codes (`0`, `1`, `99`), and command-line compilation. | When building a new custom action `.dll` for Rulerunner. |
-| **`datacap-dco-ruleset-wiring`** | How to edit `GOLDENDEMO.XML`, sync `goldendemo.xmb`, and configure `collection.xml` without wiping field data. | When adding new rulesets or changing the task profile order in Datacap Studio. |
-| **`local-ai-ocr-integration`** | Handling Base64 image payloads in memory, calling `/identify` and `/recognize`, managing LoRA adapters, and routing low confidence ($< 0.80$) to Verify. | When connecting Datacap or custom scripts to the local AI OCR service. |
-| **`filenet-datacap-export-troubleshooter`** | CEWS configuration, WSDL endpoints, property symbolic name mapping, and Object Store ACL permissions in FileNet ACCE. | When documents fail to export to IBM FileNet or users see permission errors in IBM Content Navigator. |
+| **`datacap-arabic-document-processing`** *(NEW)* | RTL character encoding with decimal Unicode `<C>` nodes, 14-digit Egyptian National ID normalization, faint dot-matrix stamp preservation (`EmployerName`), and Arabic glyph boundary padding. | When processing Arabic documents, National IDs, bank forms, or multi-line stamps. |
+| **`datacap-fingerprint-zone-calibration`** *(NEW)* | Synchronizing Fingerprint XMLs (`568.xml`, `569.xml`, `570.xml`), Setup DCO (`GOLDENDEMO.XML`), and handling runtime `Position: 0,0,0,0` through direct XML lookup. | When drawing or fine-tuning field zones in Datacap Studio or debugging unaligned crops. |
+| **`datacap-rrs-diagnostic-debugger`** *(NEW)* | Troubleshooting Rulerunner failures, resolving Error `17000008` (`CScript::AddXMLXSL`), analyzing `pageid_rrs.log`, and fixing empty/dropped field values. | When tasks fail, actions cannot be located, or field values are missing in Verification. |
+| **`datacap-custom-action-dev`** | Building C# COM reflection actions, managing memory with `GC.Collect()`, generating `<C>` character nodes with confidence codes, and dual-deploying to `C:\Datacap\RRS\` and `dco_<App>\rules\`. | When developing or compiling new custom `.dll` action libraries for Datacap. |
+| **`datacap-dco-ruleset-wiring`** | Hybrid OCR routing (handwritten Arabic to AI/vendor OCR, numbers to OCR/A), explicit `FingerprintID` binding, and ruleset sequencing in `collection.xml`. | When binding rulesets to page types or configuring task profiles without clearing runtime fields. |
+| **`local-ai-ocr-integration`** | Integrating local (`:8019`) and external (`/recognize_base64`) endpoints, memory-safe image cropping (`File.ReadAllBytes`), `document_type: "handwritten"` enforcement, and evaluating alternative word arrays. | When integrating REST vision/OCR endpoints with Datacap pipelines. |
+| **`filenet-datacap-export-troubleshooter`** | CEWS SOAP configuration, WSDL endpoints, property symbolic name mapping, and Object Store ACL permissions in FileNet ACCE. | When documents fail to export to IBM FileNet or users encounter permission errors in IBM Content Navigator. |
 
 ---
 
-### 3. Developer Templates ([`templates/`](templates/))
-* **[`DatacapActionTemplate.cs`](templates/DatacapActionTemplate.cs)**: Ready-to-use C# starter class with all boilerplate COM properties and garbage collection hooks already configured.
-* **[`RRXTemplate.rrx`](templates/RRXTemplate.rrx)**: XML template for registering custom actions into Datacap Studio palettes.
-* **[`BuildAndDeploy.bat`](templates/BuildAndDeploy.bat)**: Parameterized batch file to build and dual-deploy `.dll` and `.rrx` files directly to `C:\Datacap\RRS\` and your application's `rules\` folder.
+## ⚡ Core Architecture Patterns
+
+### 1. The Execution Lifecycle Rule
+To prevent field clearing caused by re-instantiation:
+$$\text{VScan} \longrightarrow \text{PageID (Set Page Type + FingerprintID)} \longrightarrow \text{CreateDocuments} \longrightarrow \text{ExtractFields} \longrightarrow \text{Verify} \longrightarrow \text{ExportToFileNet}$$
+
+### 2. Hybrid OCR Routing Architecture
+* **Handwritten & Arabic Text Fields** (`FullNameArabic`, `FamilyNameArabic`, `AddressArabic`, `EmployerName`, `AccountHolderName`, `AvrgMonthlyIncome`): Routed to custom action calling local AI / vendor OCR with `"document_type": "handwritten"`.
+* **Machine-Printed Digits** (`NationalIdNumber`, `AccountNumber`): Routed to `net:RecognitionOCRA.OCRAActions.RecognizeFieldOCR_A`.
+
+### 3. Automatic Fingerprint XML Fallback
+If runtime fields are created with `Position = 0,0,0,0` (due to missing template inheritance), custom actions query the master fingerprint definition (`fingerprint/<ID>.xml`) directly to retrieve exact zone coordinates.
 
 ---
 
-### 4. Production Integration Code ([`LocalOCRActions/`](LocalOCRActions/))
-* **`LocalOCR_PageIdentify` (Ruleset 16)**: Inspects incoming page images, calls `POST http://127.0.0.1:8019/identify`, classifies the page type (`Signature_Form_1`, `National ID Front`, `Form_Page_1`), and instantiates field child objects.
-* **`LocalOCR_ExtractFields` (Ruleset 18)**: Executes after `CreateDocuments`, calls `POST http://127.0.0.1:8019/recognize` using specific adapters, and writes field values and character confidence strings into the runtime DCO.
-* **`Test-LocalOCR.ps1`**: A standalone test harness you can run to test the local OCR API independently without launching Datacap.
-
----
-
-## ⚡ Key Architecture Discovery: The Lifecycle Rule
-
-> **CRITICAL RULE**: `CreateDocuments` MUST execute **after** `LocalOCR_PageIdentify` and **before** `LocalOCR_ExtractFields`.
-> 
-> If `CreateDocuments` runs after field extraction, its internal `CreateFields()` invocation re-initializes and clears all extracted values.
-> 
-> **Golden Order:** `VScan` $\rightarrow$ `PageID (Ruleset 16)` $\rightarrow$ `CreateDocuments` $\rightarrow$ `ExtractFields (Ruleset 18)` $\rightarrow$ `Verify` $\rightarrow$ `ExportToFileNet`.
-
----
-
-## 🚀 How Your Team Can Reuse This Repository
+## 🚀 How to Use & Deploy
 
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/malakelsamman/IBM-Datacap-Skill.git
    ```
 2. **Copy the skills**:
-   Copy `.bob/skills/*` into your team's project repository under `.bob/skills/` or into global user profiles at `~/.bob/skills/`.
+   Copy `.bob/skills/*` into your workspace `.bob/skills/` or into global user profiles at `~/.bob/skills/`.
 3. **Build & Deploy Custom Actions**:
-   Run `LocalOCRActions\CompileAndDeploy.bat` from an administrator command prompt on the Datacap server.
+   Run `ExternalOCRActions\CompileAndDeploy.bat` or `LocalOCRActions\CompileAndDeploy.bat` from an administrator command prompt on the Datacap server.

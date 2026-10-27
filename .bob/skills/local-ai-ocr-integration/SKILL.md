@@ -1,27 +1,72 @@
 ---
 name: local-ai-ocr-integration
-description: Integrate local or on-premise vision and OCR REST endpoints (e.g., http://127.0.0.1:8019) with document ingestion pipelines, handling Base64 payloads, adapters, confidence scoring, and verification routing.
+description: Integrate local or external vision and OCR REST endpoints with Datacap pipelines, handling Base64 payloads, document_type constraints, word alternatives, and verification routing.
 ---
 
-# Local AI OCR Integration Guide
+# Local & External AI OCR Integration Guide
 
-## 1. REST Endpoint Specification (`http://127.0.0.1:8019`)
+## 1. REST Endpoint Specifications
 
-- `GET /health`: Returns service health status `{"status": "healthy"}`.
-- `GET /model-info`: Returns model status, device, and active LoRA adapters (`account_holder_name`, `employer_name`).
-- `POST /identify`:
-  - Request: `{"file_name": "...", "image_base64": "..."}`
-  - Response: `{"ok": true, "form": "...", "page_type": "...", "document_type": "...", "confidence": 0.95, "review_required": false}`
-- `POST /recognize`:
-  - Request: `{"file_name": "...", "image_base64": "...", "form": "...", "page_type": "..."}`
-  - Response: `{"ok": true, "extracted_fields": {"FieldName": "ExtractedValue"}, "confidence": 0.92, "review_required": false}`
+### A. Local Vision/AI Model Service (`http://127.0.0.1:8019`)
+- `GET /health`: Health status `{"status": "healthy"}`.
+- `GET /model-info`: Active LoRA adapters (`account_holder_name`, `employer_name`).
+- `POST /identify`: `{"file_name": "...", "image_base64": "..."}` -> Returns `{"ok": true, "form": "...", "page_type": "...", "confidence": 0.95}`.
+- `POST /recognize`: `{"file_name": "...", "image_base64": "...", "form": "...", "page_type": "..."}` -> Returns `{"ok": true, "extracted_fields": {"FieldName": "ExtractedValue"}}`.
 
-## 2. Memory-Efficient Image Processing
-- Never lock image files on disk during processing.
-- Read image bytes using `File.ReadAllBytes(path)` and serialize to Base64 in memory.
-- Set `serializer.MaxJsonLength = int.MaxValue` in C# `JavaScriptSerializer`.
+### B. External Vendor OCR Service (`/recognize_base64`)
+- **Payload Format**:
+  ```json
+  {
+    "image_base64": "...",
+    "mime_type": "image/png",
+    "document_type": "handwritten",
+    "language": "ar"
+  }
+  ```
+- ⚠️ **Critical Constraint:** Always specify `"document_type": "handwritten"`. Specifying `"typewritten"` may fail with HTTP 400.
 
-## 3. Dynamic Verification Routing
+## 2. Word Alternatives Inspection & Scoring
+External OCR engines provide multiple recognition candidates for individual words in the `words` array. When primary text contains low-confidence tokens or noise:
+
+```csharp
+// Evaluate top candidate words from OCR response
+if (responseObj.ContainsKey("words")) {
+    var wordsList = responseObj["words"] as ArrayList;
+    var candidateWords = new List<string>();
+    foreach (Dictionary<string, object> wordItem in wordsList) {
+        if (wordItem.ContainsKey("text")) {
+            candidateWords.Add(wordItem["text"].ToString());
+        }
+    }
+    // Reconstruct normalized full text from best word candidates
+}
+```
+
+## 3. Safe In-Memory Cropping
+Never hold open file locks on page TIFF/JPEG files during recognition:
+
+```csharp
+public static byte[] CropFieldPng(string imagePath, int left, int top, int right, int bottom)
+{
+    byte[] fileBytes = File.ReadAllBytes(imagePath);
+    using (var ms = new MemoryStream(fileBytes))
+    using (var srcBmp = new Bitmap(ms))
+    {
+        int w = Math.Max(1, right - left);
+        int h = Math.Max(1, bottom - top);
+        var cropRect = new Rectangle(left, top, w, h);
+
+        using (var croppedBmp = srcBmp.Clone(cropRect, srcBmp.PixelFormat))
+        using (var outMs = new MemoryStream())
+        {
+            croppedBmp.Save(outMs, System.Drawing.Imaging.ImageFormat.Png);
+            return outMs.ToArray();
+        }
+    }
+}
+```
+
+## 4. Verification Routing
 - If `review_required == true` OR `fallback_used == true` OR `confidence < 0.80`:
-  - Flag the target DCO page or field: `DCO.Status = 1`.
-  - Log reason clearly in Datacap RRS Log.
+  - Set DCO field status: `CurrentDCO.Status = 1;`
+  - Write detailed warning to `RRLog`.

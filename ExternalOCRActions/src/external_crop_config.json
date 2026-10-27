@@ -1,0 +1,84 @@
+{
+  "_comment": "Fallback field crop zones for ExternalOCRActions when DCO zone is not yet defined. Values are normalized fractions (0.0 to 1.0) of image width/height.",
+  "fields": {
+    "Signature_Form_1": {
+      "AccountHolderName": {
+        "x": 0.5584,
+        "y": 0.1758,
+        "width": 0.2538,
+        "height": 0.0305,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest",
+        "enable_line_segmentation": true
+      },
+      "AccountNumber": {
+        "x": 0.2858,
+        "y": 0.2126,
+        "width": 0.6029,
+        "height": 0.0385,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest"
+      }
+    },
+    "Form_Page_1": {
+      "EmployerName2": {
+        "x": 0.4795,
+        "y": 0.2571,
+        "width": 0.2698,
+        "height": 0.0325,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest"
+      },
+      "AvrgMonthlyIncome": {
+        "x": 0.6974,
+        "y": 0.3353,
+        "width": 0.1386,
+        "height": 0.0200,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest"
+      }
+    },
+    "National ID Front": {
+      "FullNameArabic": {
+        "x": 0.4685,
+        "y": 0.0214,
+        "width": 0.1757,
+        "height": 0.0671,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest"
+      },
+      "FamilyNameArabic": {
+        "x": 0.5576,
+        "y": 0.0902,
+        "width": 0.0777,
+        "height": 0.0177,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest"
+      },
+      "AddressArabic": {
+        "x": 0.4498,
+        "y": 0.1056,
+        "width": 0.1870,
+        "height": 0.0223,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest"
+      },
+      "NationalIdNumber": {
+        "x": 0.4116,
+        "y": 0.1447,
+        "width": 0.2401,
+        "height": 0.0234,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest"
+      },
+      "EmployerName": {
+        "x": 0.4455,
+        "y": 0.3995,
+        "width": 0.1484,
+        "height": 0.0163,
+        "document_type": "handwritten",
+        "language": "Arabic/Latest"
+      }
+    }
+  }
+}
